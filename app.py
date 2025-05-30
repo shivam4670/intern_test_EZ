@@ -138,6 +138,138 @@ def client_login_required(f):
 
 # =========================================================
 # ROUTES
+# Client User Routes
+@app.route('/client/signup', methods=['POST'])
+def client_signup():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+    
+    if client_users.find_one({"email": email}):
+        return jsonify({"error": "Email already registered"}), 400
+    
+    hashed_pw = generate_password_hash(password)
+    user_id = client_users.insert_one({
+        "email": email,
+        "password_hash": hashed_pw,
+        "verified": False,
+        "created_at": datetime.utcnow()
+    }).inserted_id
+    
+    # Generate verification token
+    verify_token = serializer.dumps(str(user_id), salt='email-verify')
+    verify_url = f"{request.host_url}verify-email/{verify_token}"
+    
+    # Send verification email
+    send_email(
+        email,
+        "Verify Your Email",
+        f"Click to verify: <a href='{verify_url}'>{verify_url}</a>"
+    )
+    
+    return jsonify({"message": "Verification email sent"}), 201
+
+@app.route('/verify-email/<token>', methods=['GET'])
+def verify_email(token):
+    try:
+        user_id = serializer.loads(token, salt='email-verify', max_age=3600)  # 1 hour expiry
+        client_users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"verified": True}}
+        )
+        return jsonify({"message": "Email verified successfully"}), 200
+    except (SignatureExpired, BadSignature):
+        return jsonify({"error": "Invalid or expired token"}), 400
+
+@app.route('/client/login', methods=['POST'])
+def client_login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+    
+    user = client_users.find_one({"email": email})
+    if not user or not check_password_hash(user['password_hash'], password):
+        return jsonify({"error": "Invalid credentials"}), 401
+    
+    if not user.get('verified', False):
+        return jsonify({"error": "Email not verified"}), 403
+    
+    token = generate_session_token()
+    client_sessions[token] = str(user['_id'])
+    
+    return jsonify({"token": token}), 200
+
+# File Operations
+@app.route('/ops/upload', methods=['POST'])
+@ops_login_required
+def upload_file(ops_user_id):
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({"error": "File type not allowed"}), 400
+    
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    
+    file_id = uploaded_files.insert_one({
+        "filename": filename,
+        "path": filepath,
+        "uploaded_by": ops_user_id,
+        "uploaded_at": datetime.utcnow(),
+        "content_type": file.content_type
+    }).inserted_id
+    
+    return jsonify({
+        "message": "File uploaded successfully",
+        "file_id": str(file_id)
+    }), 201
+
+@app.route('/client/files', methods=['GET'])
+@client_login_required
+def list_files(client_user_id):
+    files = list(uploaded_files.find({}, {"filename": 1, "uploaded_at": 1}))
+    for file in files:
+        file['_id'] = str(file['_id'])
+    return jsonify(files), 200
+
+@app.route('/client/download/<file_id>', methods=['GET'])
+@client_login_required
+def request_download(client_user_id, file_id):
+    if not uploaded_files.find_one({"_id": ObjectId(file_id)}):
+        return jsonify({"error": "File not found"}), 404
+    
+    download_token = generate_download_token(file_id, client_user_id)
+    return jsonify({
+        "download_token": download_token,
+        "expires_in": "30 minutes"
+    }), 200
+
+@app.route('/download-file/<token>', methods=['GET'])
+def download_file(token):
+    try:
+        data = serializer.loads(token, salt='secure-download', max_age=1800)  # 30 min expiry
+        file_id = data['file_id']
+        user_id = data['user_id']
+        
+        file_data = uploaded_files.find_one({"_id": ObjectId(file_id)})
+        if not file_data:
+            return jsonify({"error": "File not found"}), 404
+            
+        return send_file(file_data['path'], as_attachment=True)
+    except (SignatureExpired, BadSignature):
+        return jsonify({"error": "Invalid or expired token"}), 400
 # =========================================================
 @app.route('/')
 def home():
