@@ -1,0 +1,198 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-f1e2-d3c4b5a6f7e8",
+    "name": "File Sharing API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Client Routes",
+      "item": [
+        {
+          "name": "Client Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"client@example.com\",\n    \"password\": \"securepassword123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/client/signup",
+              "host": ["http://localhost:5000"],
+              "path": ["client", "signup"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/verify-email/<token>",
+              "host": ["http://localhost:5000"],
+              "path": ["verify-email", "<token>"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Client Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"client@example.com\",\n    \"password\": \"securepassword123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/client/login",
+              "host": ["http://localhost:5000"],
+              "path": ["client", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Files",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{client_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/client/files",
+              "host": ["http://localhost:5000"],
+              "path": ["client", "files"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request Download",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{client_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/client/download/65d5f8a1b4c8d3a7f4e3b2c1",
+              "host": ["http://localhost:5000"],
+              "path": ["client", "download", "65d5f8a1b4c8d3a7f4e3b2c1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download File",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/download-file/<token>",
+              "host": ["http://localhost:5000"],
+              "path": ["download-file", "<token>"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ops Routes",
+      "item": [
+        {
+          "name": "Ops Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"adminpassword\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/ops/login",
+              "host": ["http://localhost:5000"],
+              "path": ["ops", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{ops_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/file.pptx"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:5000/ops/upload",
+              "host": ["http://localhost:5000"],
+              "path": ["ops", "upload"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Home",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/",
+          "host": ["http://localhost:5000"],
+          "path": [""]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "client_token",
+      "value": "client-auth-token-here"
+    },
+    {
+      "key": "ops_token",
+      "value": "ops-auth-token-here"
+    }
+  ]
+}
